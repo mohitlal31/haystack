@@ -21,6 +21,7 @@ class DocumentSplitter:
         split_by: Literal["word", "sentence", "page", "passage"] = "word",
         split_length: int = 200,
         split_overlap: int = 0,
+        split_threshold: int = 0,
     ):
         """
         :param split_by: The unit by which the document should be split. Choose from "word" for splitting by " ",
@@ -38,6 +39,7 @@ class DocumentSplitter:
         if split_overlap < 0:
             raise ValueError("split_overlap must be greater than or equal to 0.")
         self.split_overlap = split_overlap
+        self.split_threshold = split_threshold
 
     @component.output_types(documents=List[Document])
     def run(self, documents: List[Document]):
@@ -66,7 +68,7 @@ class DocumentSplitter:
                     f"DocumentSplitter only works with text documents but document.content for document ID {doc.id} is None."
                 )
             units = self._split_into_units(doc.content, self.split_by)
-            text_splits = self._concatenate_units(units, self.split_length, self.split_overlap)
+            text_splits = self._concatenate_units(units, self.split_length, self.split_overlap, self.split_threshold)
             metadata = deepcopy(doc.meta)
             metadata["source_id"] = doc.id
             split_docs += [Document(content=txt, meta=metadata) for txt in text_splits]
@@ -91,7 +93,9 @@ class DocumentSplitter:
             units[i] += split_at
         return units
 
-    def _concatenate_units(self, elements: List[str], split_length: int, split_overlap: int) -> List[str]:
+    def _concatenate_units(
+        self, elements: List[str], split_length: int, split_overlap: int, split_threshold: int
+    ) -> List[str]:
         """
         Concatenates the elements into parts of split_length units.
         """
@@ -102,4 +106,7 @@ class DocumentSplitter:
             txt = "".join(current_units)
             if len(txt) > 0:
                 text_splits.append(txt)
+        if split_threshold and len(text_splits) > 1 and len(elements) % split_length < split_threshold:
+            text_splits[-2] += text_splits[-1]
+            text_splits.pop()
         return text_splits

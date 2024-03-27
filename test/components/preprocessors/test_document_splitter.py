@@ -121,6 +121,21 @@ class TestDocumentSplitter:
         assert result["documents"][0].content == "This is a text with some words. There is a "
         assert result["documents"][1].content == "is a second sentence. And there is a third sentence."
 
+    def test_split_by_word_with_threshold(self):
+        splitter = DocumentSplitter(split_by="word", split_length=10, split_threshold=15)
+        result = splitter.run(
+            documents=[
+                Document(
+                    content="This is a text with some words. There is a second sentence. And there is a third sentence."
+                )
+            ]
+        )
+        assert len(result["documents"]) == 1
+        assert (
+            result["documents"][0].content
+            == "This is a text with some words. There is a second sentence. And there is a third sentence."
+        )
+
     def test_source_id_stored_in_metadata(self):
         splitter = DocumentSplitter(split_by="word", split_length=10)
         doc1 = Document(content="This is a text with some words.")
